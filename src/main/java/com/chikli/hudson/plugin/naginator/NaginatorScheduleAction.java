@@ -24,6 +24,9 @@
 
 package com.chikli.hudson.plugin.naginator;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import hudson.matrix.MatrixRun;
 import hudson.model.Action;
 import hudson.model.InvisibleAction;
@@ -53,7 +56,7 @@ public class NaginatorScheduleAction extends InvisibleAction {
      * @param maxSchedule max times to reschedule the build. Less or equal to 0 indicates "always".
      */
     public NaginatorScheduleAction(int maxSchedule) {
-        this(maxSchedule, new ProgressiveDelay(5 * 60, 3 * 60 * 60), false);
+        this(maxSchedule, null, false);
     }
     
     /**
@@ -63,9 +66,9 @@ public class NaginatorScheduleAction extends InvisibleAction {
      * @param delay A scheduling policy to trigger a new build.
      * @param rerunMatrixPart tests matrix child builds and triggers only failed parts.
      */
-    public NaginatorScheduleAction(int maxSchedule, ScheduleDelay delay, boolean rerunMatrixPart) {
+    public NaginatorScheduleAction(int maxSchedule, @Nullable ScheduleDelay delay, boolean rerunMatrixPart) {
         this.maxSchedule = maxSchedule;
-        this.delay = delay;
+        this.delay = (delay != null)?delay:new ProgressiveDelay(5 * 60, 3 * 60 * 60);
         this.rerunMatrixPart = rerunMatrixPart;
     }
     
@@ -82,6 +85,7 @@ public class NaginatorScheduleAction extends InvisibleAction {
     /**
      * @return A scheduling policy to trigger a new build
      */
+    @Nonnull
     public ScheduleDelay getDelay() {
         return delay;
     }
@@ -104,7 +108,7 @@ public class NaginatorScheduleAction extends InvisibleAction {
      * @param retryCount the count the build is rescheduled.
      * @return whether to reschedule the build.
      */
-    public boolean shouldSchedule(Run<?, ?> run, TaskListener listener, int retryCount) {
+    public boolean shouldSchedule(@Nonnull Run<?, ?> run, @Nonnull TaskListener listener, int retryCount) {
         return getMaxSchedule() <= 0 || retryCount < getMaxSchedule();
     }
     
@@ -115,7 +119,7 @@ public class NaginatorScheduleAction extends InvisibleAction {
      * @param run
      * @return
      */
-    public boolean shouldScheduleForMatrixRun(MatrixRun run, TaskListener listener) {
+    public boolean shouldScheduleForMatrixRun(@Nonnull MatrixRun run, @Nonnull TaskListener listener) {
         return true;
     }
 }

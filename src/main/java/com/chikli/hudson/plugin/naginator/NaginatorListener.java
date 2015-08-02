@@ -12,6 +12,8 @@ import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 /**
  * @author <a href="mailto:nicolas.deloof@cloudbees.com">Nicolas De loof</a>
  */
@@ -19,13 +21,13 @@ public class NaginatorListener extends RunListener<AbstractBuild<?,?>> {
 
 
     @Override
-    public void onCompleted(AbstractBuild<?, ?> build, TaskListener listener) {
-        int retryCount = calculateRetryCount(build);
-        
+    public void onCompleted(AbstractBuild<?, ?> build, @Nonnull TaskListener listener) {
         // Do nothing for a single Matrix run. (Run only when all Matrix finishes)
-        if (build instanceof MatrixRun) {
+        if (build == null || build instanceof MatrixRun) {
             return;
         }
+        
+        int retryCount = calculateRetryCount(build);
         
         List<NaginatorScheduleAction> actions = build.getActions(NaginatorScheduleAction.class);
         for (NaginatorScheduleAction action : actions) {
@@ -81,7 +83,7 @@ public class NaginatorListener extends RunListener<AbstractBuild<?,?>> {
         return n < max;
     }
 
-    private int calculateRetryCount(Run<?, ?> r) {
+    private int calculateRetryCount(@Nonnull Run<?, ?> r) {
         int n = 0;
         
         while (r != null && r.getAction(NaginatorAction.class) != null) {

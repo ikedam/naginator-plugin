@@ -27,6 +27,9 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 /**
  * Reschedules a build if the current one fails.
  *
@@ -176,6 +179,7 @@ public class NaginatorPublisher extends Notifier {
             this.checkRegexp = publisher.isCheckRegexp();
         }
         
+        @Nullable
         public String getRegexpForRerun() {
             return regexpForRerun;
         }
@@ -189,7 +193,7 @@ public class NaginatorPublisher extends Notifier {
         }
         
         @Override
-        public boolean shouldSchedule(Run<?, ?> run, TaskListener listener, int retryCount) {
+        public boolean shouldSchedule(@Nonnull Run<?, ?> run, @Nonnull TaskListener listener, int retryCount) {
             if ((run.getResult() == Result.SUCCESS) || (run.getResult() == Result.ABORTED)) {
                 return false;
             }
@@ -226,7 +230,7 @@ public class NaginatorPublisher extends Notifier {
         }
 
         @Override
-        public boolean shouldScheduleForMatrixRun(MatrixRun run, TaskListener listener) {
+        public boolean shouldScheduleForMatrixRun(@Nonnull MatrixRun run, @Nonnull TaskListener listener) {
             if ((run.getResult() == Result.SUCCESS) || (run.getResult() == Result.ABORTED)) {
                 return false;
             }
@@ -236,11 +240,7 @@ public class NaginatorPublisher extends Notifier {
             return true;
         }
         
-        private boolean parseLog(File logFile, String regexp) throws IOException {
-
-            if (regexp == null) {
-                return false;
-            }
+        private boolean parseLog(File logFile, @Nonnull String regexp) throws IOException {
 
             // Assume default encoding and text files
             String line;
