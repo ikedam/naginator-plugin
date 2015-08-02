@@ -28,7 +28,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -49,8 +49,8 @@ import hudson.tasks.Builder;
  * Many tests for {@link NaginatorPublisher} are also in {@link NaginatorListenerTest}
  */
 public class NaginatorPublisherTest {
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule j = new JenkinsRule();
     
     private static class FailSpecificAxisBuilder extends Builder {
         private final String combinationFilterToFail;
@@ -79,70 +79,81 @@ public class NaginatorPublisherTest {
         }
     }
     
+    /**
+     * Disabling {@link NaginatorPublisher#isRerunIfUnstable()}
+     * should trigger all children.
+     * 
+     * @throws Exception
+     */
     @Test
-    public void testMatrixBuild() throws Exception {
-        // all children are rescheduled if rerunMatrixPart is not set.
-        {
-            MatrixProject p = j.createMatrixProject();
-            AxisList axes = new AxisList(
-                    new Axis("axis1", "1", "2"),
-                    new Axis("axis2", "1", "2")
-            );
-            p.setAxes(axes);
-            p.getBuildersList().add(new FailSpecificAxisBuilder("(axis1=='1' && axis2=='2') || (axis1=='2' && axis2=='1')"));
-            p.getPublishersList().add(new NaginatorPublisher(
-                    null,   // regexpForRerun
-                    false,  // rerunIfUnstable
-                    false,  // rerunMatrixPart
-                    false,  // checkRegexp
-                    1,      // maxSchedule
-                    new FixedDelay(0)
-            ));
-            
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 1 time
-            assertEquals(2, p.getLastBuild().number);
-            
-            // (1, 1), (1, 2), (2, 1), (2, 2) are rescheduled.
-            MatrixBuild b = p.getLastBuild();
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "1")));
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
-            assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
-            assertNotNull(b.getExactRun(new Combination(axes, "2", "2")));
-        }
+    public void testMatrixBuildWithoutRerunMatrixPart() throws Exception {
+        final int maxSchedule = 2;
         
-        // only failed children are rescheduled if rerunMatrixPart is set.
-        {
-            MatrixProject p = j.createMatrixProject();
-            AxisList axes = new AxisList(
-                    new Axis("axis1", "1", "2"),
-                    new Axis("axis2", "1", "2")
-            );
-            p.setAxes(axes);
-            p.getBuildersList().add(new FailSpecificAxisBuilder("(axis1=='1' && axis2=='2') || (axis1=='2' && axis2=='1')"));
-            p.getPublishersList().add(new NaginatorPublisher(
-                    null,   // regexpForRerun
-                    false,  // rerunIfUnstable
-                    true,  // rerunMatrixPart
-                    false,  // checkRegexp
-                    1,      // maxSchedule
-                    new FixedDelay(0)
-            ));
-            
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 1 time
-            assertEquals(2, p.getLastBuild().number);
-            
-            // (1, 2), (2, 1) are rescheduled.
-            MatrixBuild b = p.getLastBuild();
-            assertNull(b.getExactRun(new Combination(axes, "1", "1")));
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
-            assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
-            assertNull(b.getExactRun(new Combination(axes, "2", "2")));
-        }
+        MatrixProject p = j.createMatrixProject();
+        AxisList axes = new AxisList(
+                new Axis("axis1", "1", "2"),
+                new Axis("axis2", "1", "2")
+        );
+        p.setAxes(axes);
+        p.getBuildersList().add(new FailSpecificAxisBuilder("(axis1=='1' && axis2=='2') || (axis1=='2' && axis2=='1')"));
+        p.getPublishersList().add(new NaginatorPublisher(
+                null,   // regexpForRerun
+                false,  // rerunIfUnstable
+                false,  // rerunMatrixPart
+                false,  // checkRegexp
+                maxSchedule,
+                new FixedDelay(0)
+        ));
+        
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
+        
+        assertEquals(maxSchedule + 1, p.getLastBuild().number);
+        
+        // (1, 1), (1, 2), (2, 1), (2, 2) are rescheduled.
+        MatrixBuild b = p.getLastBuild();
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "1")));
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
+        assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
+        assertNotNull(b.getExactRun(new Combination(axes, "2", "2")));
+    }
+        
+    /**
+     * Enabling {@link NaginatorPublisher#isRerunIfUnstable()}
+     * should trigger only failed children.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testMatrixBuildWithRerunMatrixPart() throws Exception {
+        final int maxSchedule = 2;
+        
+        MatrixProject p = j.createMatrixProject();
+        AxisList axes = new AxisList(
+                new Axis("axis1", "1", "2"),
+                new Axis("axis2", "1", "2")
+        );
+        p.setAxes(axes);
+        p.getBuildersList().add(new FailSpecificAxisBuilder("(axis1=='1' && axis2=='2') || (axis1=='2' && axis2=='1')"));
+        p.getPublishersList().add(new NaginatorPublisher(
+                null,   // regexpForRerun
+                false,  // rerunIfUnstable
+                true,  // rerunMatrixPart
+                false,  // checkRegexp
+                maxSchedule,
+                new FixedDelay(0)
+        ));
+        
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
+        
+        assertEquals(maxSchedule + 1, p.getLastBuild().number);
+        
+        // (1, 2), (2, 1) are rescheduled.
+        MatrixBuild b = p.getLastBuild();
+        assertNull(b.getExactRun(new Combination(axes, "1", "1")));
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
+        assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
+        assertNull(b.getExactRun(new Combination(axes, "2", "2")));
     }
 }

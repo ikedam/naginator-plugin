@@ -43,7 +43,7 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.Builder;
 
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -51,8 +51,8 @@ import org.jvnet.hudson.test.JenkinsRule;
  *
  */
 public class NaginatorScheduleActionTest {
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule j = new JenkinsRule();
     
     public static class ScheduleActionBuilder extends Builder {
         private final NaginatorScheduleAction[] actions;
@@ -108,37 +108,68 @@ public class NaginatorScheduleActionTest {
         }
     }
     
+    /**
+     * {@link NaginatorScheduleAction#shouldSchedule(Run, TaskListener, int)}
+     * should be true only while <code>retryCount</code> is
+     * under <code>maxSchedule</code>
+     * 
+     * @throws Exception
+     */
     @Test
     public void testShouldReschedule() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         FreeStyleBuild b = p.scheduleBuild2(0).get();
         
-        {
-            NaginatorScheduleAction target = new NaginatorScheduleAction(2);
-            assertTrue(target.shouldSchedule(b, TaskListener.NULL, 0));
-            assertTrue(target.shouldSchedule(b, TaskListener.NULL, 1));
-            assertFalse(target.shouldSchedule(b, TaskListener.NULL, 2));
-        }
+        NaginatorScheduleAction target = new NaginatorScheduleAction(2);
+        assertTrue(target.shouldSchedule(b, TaskListener.NULL, 0));
+        assertTrue(target.shouldSchedule(b, TaskListener.NULL, 1));
+        assertFalse(target.shouldSchedule(b, TaskListener.NULL, 2));
+    }
         
-        {
-            NaginatorScheduleAction target = new NaginatorScheduleAction();
-            assertEquals(0, target.getMaxSchedule());
-            assertTrue(target.shouldSchedule(b, TaskListener.NULL, 0));
-            assertTrue(target.shouldSchedule(b, TaskListener.NULL, 100));
-            assertTrue(target.shouldSchedule(b, TaskListener.NULL, 2000));
-        }
+    /**
+     * {@link NaginatorScheduleAction#shouldSchedule(Run, TaskListener, int)}
+     * should be true always true when <code>maxSchedule</code> is 0.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testShouldRescheduleWithMaxScheduleIs0() throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
+        FreeStyleBuild b = p.scheduleBuild2(0).get();
         
-        {
-            NaginatorScheduleAction target = new NaginatorScheduleAction(-1);
-            assertTrue(target.shouldSchedule(b, TaskListener.NULL, 0));
-            assertTrue(target.shouldSchedule(b, TaskListener.NULL, 100));
-            assertTrue(target.shouldSchedule(b, TaskListener.NULL, 2000));
-        }
+        NaginatorScheduleAction target = new NaginatorScheduleAction();
+        assertEquals(0, target.getMaxSchedule());
+        assertTrue(target.shouldSchedule(b, TaskListener.NULL, 0));
+        assertTrue(target.shouldSchedule(b, TaskListener.NULL, 100));
+        assertTrue(target.shouldSchedule(b, TaskListener.NULL, 2000));
+    }
+        
+    /**
+     * {@link NaginatorScheduleAction#shouldSchedule(Run, TaskListener, int)}
+     * should be true always true when <code>maxSchedule</code> is under 0.
+     * This is not a correct usage but a fail-safe.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testShouldRescheduleWithMaxScheduleIsMinus() throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
+        FreeStyleBuild b = p.scheduleBuild2(0).get();
+        
+        NaginatorScheduleAction target = new NaginatorScheduleAction(-1);
+        assertTrue(target.shouldSchedule(b, TaskListener.NULL, 0));
+        assertTrue(target.shouldSchedule(b, TaskListener.NULL, 100));
+        assertTrue(target.shouldSchedule(b, TaskListener.NULL, 2000));
     }
     
+    /**
+     * {@link NaginatorPublisher} should not reschedule a build
+     * without {@link NaginatorScheduleAction}.
+     * 
+     * @throws Exception
+     */
     @Test
     public void testNoNaginatorScheduleAction() throws Exception {
-        // rescheduled specified times.
         FreeStyleProject p = j.createFreeStyleProject();
         p.getBuildersList().add(new ScheduleActionBuilder());
         p.scheduleBuild2(0);
@@ -148,188 +179,230 @@ public class NaginatorScheduleActionTest {
         assertEquals(1, p.getLastBuild().number);
     }
     
+    /**
+     * {@link NaginatorScheduleAction} should have 
+     * {@link NaginatorPublisher} reschedule the build
+     * with times specified with <code>maxSchedule</code>
+     * 
+     * @throws Exception
+     */
     @Test
-    public void testFreeStyle() throws Exception {
-        // rescheduled specified times.
-        {
-            FreeStyleProject p = j.createFreeStyleProject();
-            p.getBuildersList().add(new ScheduleActionBuilder(
-                    new NaginatorScheduleAction(
-                            2,
-                            new FixedDelay(0),
-                            false
-                    )
-            ));
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 2 times.
-            assertEquals(3, p.getLastBuild().number);
-        }
+    public void testReschedule() throws Exception {
+        final int maxSchedule = 2;
         
-        // not scheduled when returning false.
-        {
-            FreeStyleProject p = j.createFreeStyleProject();
-            p.getBuildersList().add(new ScheduleActionBuilder(
-                    new AlwaysFalseScheduleAction(
-                            2,
-                            new FixedDelay(0),
-                            false
-                    )
-            ));
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 0 times.
-            assertEquals(1, p.getLastBuild().number);
-        }
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.getBuildersList().add(new ScheduleActionBuilder(
+                new NaginatorScheduleAction(
+                        maxSchedule,
+                        new FixedDelay(0),
+                        false
+                )
+        ));
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
         
-        // scheduled when any of actions returns true.
-        {
-            FreeStyleProject p = j.createFreeStyleProject();
-            p.getBuildersList().add(new ScheduleActionBuilder(
-                    new AlwaysFalseScheduleAction(
-                            2,
-                            new FixedDelay(0),
-                            false
-                    ),
-                    new NaginatorScheduleAction(
-                            2,
-                            new FixedDelay(0),
-                            false
-                    )
-            ));
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 2 times.
-            assertEquals(3, p.getLastBuild().number);
-        }
+        assertEquals(maxSchedule + 1, p.getLastBuild().number);
+    }
+        
+    /**
+     * {@link NaginatorScheduleAction#shouldSchedule(Run, TaskListener, int)}
+     * returning 0 should not have {@link NaginatorPublisher}
+     * reschedule the build.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testNotRescheduledWithShouldRescheduleReturning0() throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.getBuildersList().add(new ScheduleActionBuilder(
+                new AlwaysFalseScheduleAction(
+                        2,
+                        new FixedDelay(0),
+                        false
+                )
+        ));
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
+        
+        // no reschedule.
+        assertEquals(1, p.getLastBuild().number);
+    }
+        
+    /**
+     * When there are multiple {@link NaginatorScheduleAction}s,
+     * {@link NaginatorPublisher} should reschedule the build
+     * if any of them return true.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testMultipleNaginatorScheduleAction() throws Exception {
+        final int maxSchedule = 2;
+        
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.getBuildersList().add(new ScheduleActionBuilder(
+                new AlwaysFalseScheduleAction(
+                        maxSchedule,
+                        new FixedDelay(0),
+                        false
+                ),
+                new NaginatorScheduleAction(
+                        maxSchedule,
+                        new FixedDelay(0),
+                        false
+                )
+        ));
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
+        
+        assertEquals(maxSchedule + 1, p.getLastBuild().number);
     }
     
+    /**
+     * The default behavior of {@link NaginatorScheduleAction}
+     * for multi-configuration projects is to run all children
+     * even if <code>rerunMatrixPart</code> is set.
+     * 
+     * @throws Exception
+     */
     @Test
-    public void testMatrix() throws Exception {
-        // all children are rescheduled.
-        {
-            MatrixProject p = j.createMatrixProject();
-            AxisList axes = new AxisList(
-                    new Axis("axis1", "1", "2"),
-                    new Axis("axis2", "1", "2")
-            );
-            p.setAxes(axes);
-            p.setCombinationFilter("!(axis1=='2' && axis2=='2')");
-            p.getBuildersList().add(new ScheduleActionBuilder(
-                    new NaginatorScheduleAction(
-                            2,
-                            new FixedDelay(0),
-                            true
-                    )
-            ));
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 2 times.
-            assertEquals(3, p.getLastBuild().number);
-            
-            // (1, 1), (1, 2), (2, 1) are scheduled
-            MatrixBuild b = p.getLastBuild();
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "1")));
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
-            assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
-            assertNull(b.getExactRun(new Combination(axes, "2", "2")));
-        }
+    public void testMatrixWithRerunMatrixPartWithoutFiltering() throws Exception {
+        final int maxSchedule = 2;
         
-        // specified children are rescheduled.
-        {
-            MatrixProject p = j.createMatrixProject();
-            AxisList axes = new AxisList(
-                    new Axis("axis1", "1", "2"),
-                    new Axis("axis2", "1", "2")
-            );
-            p.setAxes(axes);
-            p.setCombinationFilter("!(axis1=='2' && axis2=='2')");
-            p.getBuildersList().add(new ScheduleActionBuilder(
-                    new MatrixConfigurationScheduleAction(
-                            "(axis1=='1' && axis2=='2') || (axis1=='2' && axis2=='1')",
-                            1,
-                            new FixedDelay(0),
-                            true
-                    )
-            ));
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 1 times.
-            assertEquals(2, p.getLastBuild().number);
-            
-            // (1, 2), (2, 1) are scheduled
-            MatrixBuild b = p.getLastBuild();
-            assertNull(b.getExactRun(new Combination(axes, "1", "1")));
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
-            assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
-            assertNull(b.getExactRun(new Combination(axes, "2", "2")));
-        }
+        MatrixProject p = j.createMatrixProject();
+        AxisList axes = new AxisList(
+                new Axis("axis1", "1", "2"),
+                new Axis("axis2", "1", "2")
+        );
+        p.setAxes(axes);
+        p.setCombinationFilter("!(axis1=='2' && axis2=='2')");
+        p.getBuildersList().add(new ScheduleActionBuilder(
+                new NaginatorScheduleAction(
+                        maxSchedule,
+                        new FixedDelay(0),
+                        true
+                )
+        ));
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
         
-        // all children are rescheduled if no children is specified to reschedule.
-        {
-            MatrixProject p = j.createMatrixProject();
-            AxisList axes = new AxisList(
-                    new Axis("axis1", "1", "2"),
-                    new Axis("axis2", "1", "2")
-            );
-            p.setAxes(axes);
-            p.setCombinationFilter("!(axis1=='2' && axis2=='2')");
-            p.getBuildersList().add(new ScheduleActionBuilder(
-                    new MatrixConfigurationScheduleAction(
-                            "false",
-                            1,
-                            new FixedDelay(0),
-                            true
-                    )
-            ));
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 1 times.
-            assertEquals(2, p.getLastBuild().number);
-            
-            // (1, 1), (1, 2), (2, 1) are scheduled
-            MatrixBuild b = p.getLastBuild();
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "1")));
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
-            assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
-            assertNull(b.getExactRun(new Combination(axes, "2", "2")));
-        }
+        assertEquals(maxSchedule + 1, p.getLastBuild().number);
         
-        // all children are rescheduled if rerunMatrixPart is set to false.
-        {
-            MatrixProject p = j.createMatrixProject();
-            AxisList axes = new AxisList(
-                    new Axis("axis1", "1", "2"),
-                    new Axis("axis2", "1", "2")
-            );
-            p.setAxes(axes);
-            p.setCombinationFilter("!(axis1=='2' && axis2=='2')");
-            p.getBuildersList().add(new ScheduleActionBuilder(
-                    new MatrixConfigurationScheduleAction(
-                            "(axis1=='1' && axis2=='2') || (axis1=='2' && axis2=='1')",
-                            1,
-                            new FixedDelay(0),
-                            false
-                    )
-            ));
-            p.scheduleBuild2(0);
-            j.waitUntilNoActivity();
-            
-            // retries 1 times.
-            assertEquals(2, p.getLastBuild().number);
-            
-            // (1, 1), (1, 2), (2, 1) are scheduled
-            MatrixBuild b = p.getLastBuild();
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "1")));
-            assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
-            assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
-            assertNull(b.getExactRun(new Combination(axes, "2", "2")));
-        }
+        // (1, 1), (1, 2), (2, 1) are scheduled
+        MatrixBuild b = p.getLastBuild();
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "1")));
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
+        assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
+        assertNull(b.getExactRun(new Combination(axes, "2", "2")));
+    }
+    
+    /**
+     * Overriding {@link NaginatorScheduleAction#shouldScheduleForMatrixRun(MatrixRun, TaskListener)}
+     * allows filter children to reschedule.
+     * 
+     * @throws Exception
+     */
+    public void testMatrixWithRerunMatrixPartWithFiltering() throws Exception {
+        final int maxSchedule = 1;
+        
+        MatrixProject p = j.createMatrixProject();
+        AxisList axes = new AxisList(
+                new Axis("axis1", "1", "2"),
+                new Axis("axis2", "1", "2")
+        );
+        p.setAxes(axes);
+        p.setCombinationFilter("!(axis1=='2' && axis2=='2')");
+        p.getBuildersList().add(new ScheduleActionBuilder(
+                new MatrixConfigurationScheduleAction(
+                        "(axis1=='1' && axis2=='2') || (axis1=='2' && axis2=='1')",
+                        maxSchedule,
+                        new FixedDelay(0),
+                        true
+                )
+        ));
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
+        
+        assertEquals(maxSchedule + 1, p.getLastBuild().number);
+        
+        // (1, 2), (2, 1) are scheduled
+        MatrixBuild b = p.getLastBuild();
+        assertNull(b.getExactRun(new Combination(axes, "1", "1")));
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
+        assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
+        assertNull(b.getExactRun(new Combination(axes, "2", "2")));
+    }
+    
+    /**
+     * Filtering out all children cause trigger all children.
+     * 
+     * @throws Exception
+     */
+    public void testMatrixWithNoChildren() throws Exception {
+        final int maxSchedule = 1;
+        
+        MatrixProject p = j.createMatrixProject();
+        AxisList axes = new AxisList(
+                new Axis("axis1", "1", "2"),
+                new Axis("axis2", "1", "2")
+        );
+        p.setAxes(axes);
+        p.setCombinationFilter("!(axis1=='2' && axis2=='2')");
+        p.getBuildersList().add(new ScheduleActionBuilder(
+                new MatrixConfigurationScheduleAction(
+                        "false",
+                        1,
+                        new FixedDelay(0),
+                        true
+                )
+        ));
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
+        
+        assertEquals(maxSchedule + 1, p.getLastBuild().number);
+        
+        // (1, 1), (1, 2), (2, 1) are scheduled
+        MatrixBuild b = p.getLastBuild();
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "1")));
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
+        assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
+        assertNull(b.getExactRun(new Combination(axes, "2", "2")));
+    }
+    
+    /**
+     * Unsetting <code>rerunMatrixPart</code> triggers all children
+     * even if overriding {@link NaginatorScheduleAction#shouldScheduleForMatrixRun(MatrixRun, TaskListener)}
+     * 
+     * @throws Exception
+     */
+    public void testMatrixWithoutRerunMatrixPart() throws Exception {
+        final int maxSchedule = 1;
+        
+        MatrixProject p = j.createMatrixProject();
+        AxisList axes = new AxisList(
+                new Axis("axis1", "1", "2"),
+                new Axis("axis2", "1", "2")
+        );
+        p.setAxes(axes);
+        p.setCombinationFilter("!(axis1=='2' && axis2=='2')");
+        p.getBuildersList().add(new ScheduleActionBuilder(
+                new MatrixConfigurationScheduleAction(
+                        "(axis1=='1' && axis2=='2') || (axis1=='2' && axis2=='1')",
+                        1,
+                        new FixedDelay(0),
+                        false
+                )
+        ));
+        p.scheduleBuild2(0);
+        j.waitUntilNoActivity();
+        
+        assertEquals(maxSchedule + 1, p.getLastBuild().number);
+        
+        // (1, 1), (1, 2), (2, 1) are scheduled
+        MatrixBuild b = p.getLastBuild();
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "1")));
+        assertNotNull(b.getExactRun(new Combination(axes, "1", "2")));
+        assertNotNull(b.getExactRun(new Combination(axes, "2", "1")));
+        assertNull(b.getExactRun(new Combination(axes, "2", "2")));
     }
 }
