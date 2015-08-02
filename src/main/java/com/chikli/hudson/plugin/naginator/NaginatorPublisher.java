@@ -98,15 +98,15 @@ public class NaginatorPublisher extends Notifier {
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-        if (!(build instanceof MatrixRun)) {
-            build.addAction(new Action(this));
-        } else {
+        if (build instanceof MatrixRun) {
             MatrixBuild parent = ((MatrixRun)build).getParentBuild();
             if (parent.getAction(Action.class) == null) {
                 // No strict exclusion is required
                 // as it doesn't matter if the action gets duplicated.
                 parent.addAction(new Action(this));
             }
+        } else {
+            build.addAction(new Action(this));
         }
         return true;
     }

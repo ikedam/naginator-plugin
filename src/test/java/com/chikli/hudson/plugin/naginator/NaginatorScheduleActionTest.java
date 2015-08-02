@@ -64,16 +64,16 @@ public class NaginatorScheduleActionTest {
         @Override
         public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
                 throws InterruptedException, IOException {
-            if (!(build instanceof MatrixRun)) {
-                for (NaginatorScheduleAction action : actions) {
-                    build.addAction(action);
-                }
-            } else {
+            if (build instanceof MatrixRun) {
                 MatrixBuild parent = ((MatrixRun) build).getParentBuild();
                 if (parent.getAction(NaginatorScheduleAction.class) == null) {
                     for (NaginatorScheduleAction action : actions) {
                         parent.addAction(action);
                     }
+                }
+            } else {
+                for (NaginatorScheduleAction action : actions) {
+                    build.addAction(action);
                 }
             }
             return true;
