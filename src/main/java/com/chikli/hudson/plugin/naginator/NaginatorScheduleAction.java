@@ -53,7 +53,7 @@ public class NaginatorScheduleAction extends InvisibleAction {
      * @param maxSchedule max times to reschedule the build. Less or equal to 0 indicates "always".
      */
     public NaginatorScheduleAction(int maxSchedule) {
-        this(maxSchedule, new ProgressiveDelay(5*60, 3*60*60), false);
+        this(maxSchedule, new ProgressiveDelay(5 * 60, 3 * 60 * 60), false);
     }
     
     /**
@@ -104,7 +104,7 @@ public class NaginatorScheduleAction extends InvisibleAction {
      * @param retryCount the count the build is rescheduled.
      * @return whether to reschedule the build.
      */
-    public boolean shouldSchedule(Run<?,?> run, TaskListener listener, int retryCount) {
+    public boolean shouldSchedule(Run<?, ?> run, TaskListener listener, int retryCount) {
         return getMaxSchedule() <= 0 || retryCount < getMaxSchedule();
     }
     

@@ -28,20 +28,20 @@ public class NaginatorListener extends RunListener<AbstractBuild<?,?>> {
         }
         
         List<NaginatorScheduleAction> actions = build.getActions(NaginatorScheduleAction.class);
-        for (NaginatorScheduleAction action: actions) {
+        for (NaginatorScheduleAction action : actions) {
             if (action.shouldSchedule(build, listener, retryCount)) {
                 int n = action.getDelay().computeScheduleDelay(build);
                 LOGGER.log(Level.FINE, "about to try to schedule a build #{0} in {1} seconds for {2}",
                         new Object[]{build.getNumber(), n, build.getProject().getName()} );
                 
                 List<Combination> combsToRerun = new ArrayList<Combination>();
-    
+
                 if (action.isRerunMatrixPart()) {
                     if (build instanceof MatrixBuild) {
                         MatrixBuild mb = (MatrixBuild) build;
                         List<MatrixRun> matrixRuns = mb.getRuns();
-    
-                        for(MatrixRun r : matrixRuns) {
+
+                        for (MatrixRun r : matrixRuns) {
                             if (r.getNumber() == build.getNumber()) {
                                 if (!action.shouldScheduleForMatrixRun(r, listener)) {
                                     continue;
@@ -51,10 +51,10 @@ public class NaginatorListener extends RunListener<AbstractBuild<?,?>> {
                                 combsToRerun.add(r.getParent().getCombination());    
                             }
                         }
-    
+
                     }
                 }
-    
+
                 if (!combsToRerun.isEmpty()) {
                     LOGGER.log(Level.FINE, "schedule matrix rebuild");
                     scheduleMatrixBuild(build, combsToRerun, n);
@@ -80,8 +80,8 @@ public class NaginatorListener extends RunListener<AbstractBuild<?,?>> {
 
         return n < max;
     }
-    
-    private int calculateRetryCount(Run<?,?> r) {
+
+    private int calculateRetryCount(Run<?, ?> r) {
         int n = 0;
         
         while (r != null && r.getAction(NaginatorAction.class) != null) {

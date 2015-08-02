@@ -205,7 +205,7 @@ public class NaginatorPublisher extends Notifier {
                 LOGGER.log(Level.FINEST, "Got checkRegexp == true");
                 
                 String regexpForRerun = getRegexpForRerun();
-                if ((regexpForRerun !=null) && (!regexpForRerun.equals(""))) {
+                if ((regexpForRerun != null) && (!regexpForRerun.equals(""))) {
                     LOGGER.log(Level.FINEST, "regexpForRerun - {0}", regexpForRerun);
                     
                     try {
@@ -224,7 +224,7 @@ public class NaginatorPublisher extends Notifier {
             
             return super.shouldSchedule(run, listener, retryCount);
         }
-        
+
         @Override
         public boolean shouldScheduleForMatrixRun(MatrixRun run, TaskListener listener) {
             if ((run.getResult() == Result.SUCCESS) || (run.getResult() == Result.ABORTED)) {
@@ -247,18 +247,18 @@ public class NaginatorPublisher extends Notifier {
             Pattern pattern = Pattern.compile(regexp);
             BufferedReader reader = null;
             try {
-              reader = new BufferedReader(new FileReader(logFile));
-              while ((line = reader.readLine()) != null) {
-                  Matcher matcher = pattern.matcher(line);
-                  if (matcher.find()) {
-                      return true;
-                  }
-              }
-              return false;
-            }
-            finally {
-              if(reader != null)
-                reader.close();
+                reader = new BufferedReader(new FileReader(logFile));
+                while ((line = reader.readLine()) != null) {
+                    Matcher matcher = pattern.matcher(line);
+                    if (matcher.find()) {
+                        return true;
+                    }
+                }
+                return false;
+            } finally {
+                if (reader != null) {
+                    reader.close();
+                }
             }
         }
     }

@@ -66,7 +66,7 @@ public class NaginatorPublisherTest {
                 throw new AbortException("only applicable for MatrixRun");
             }
             
-            MatrixRun run = (MatrixRun)build;
+            MatrixRun run = (MatrixRun) build;
             
             if (run.getParent().getCombination().evalGroovyExpression(
                     run.getParent().getParent().getAxes(),
