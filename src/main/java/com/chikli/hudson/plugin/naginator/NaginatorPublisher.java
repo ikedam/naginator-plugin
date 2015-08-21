@@ -241,6 +241,8 @@ public class NaginatorPublisher extends Notifier {
         }
         
         private boolean parseLog(File logFile, @Nonnull String regexp) throws IOException {
+            // TODO annotate `logFile` with `@Nonnull`
+            // after upgrading the target Jenkins to 1.568 or later.
 
             // Assume default encoding and text files
             String line;

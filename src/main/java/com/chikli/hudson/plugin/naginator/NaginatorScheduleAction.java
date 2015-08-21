@@ -68,7 +68,7 @@ public class NaginatorScheduleAction extends InvisibleAction {
      */
     public NaginatorScheduleAction(int maxSchedule, @Nullable ScheduleDelay delay, boolean rerunMatrixPart) {
         this.maxSchedule = maxSchedule;
-        this.delay = (delay != null)?delay:new ProgressiveDelay(5 * 60, 3 * 60 * 60);
+        this.delay = (delay != null) ? delay : new ProgressiveDelay(5 * 60, 3 * 60 * 60);
         this.rerunMatrixPart = rerunMatrixPart;
     }
     

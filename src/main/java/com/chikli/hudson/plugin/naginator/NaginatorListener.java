@@ -22,7 +22,7 @@ public class NaginatorListener extends RunListener<AbstractBuild<?,?>> {
 
     @Override
     public void onCompleted(AbstractBuild<?, ?> build, @Nonnull TaskListener listener) {
-        // Do nothing for a single Matrix run. (Run only when all Matrix finishes)
+        // Do nothing for null or a single Matrix run. (Run only when all Matrix finishes)
         if (build == null || build instanceof MatrixRun) {
             return;
         }
