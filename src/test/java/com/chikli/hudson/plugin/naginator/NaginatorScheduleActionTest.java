@@ -302,6 +302,7 @@ public class NaginatorScheduleActionTest {
      * 
      * @throws Exception
      */
+    @Test
     public void testMatrixWithRerunMatrixPartWithFiltering() throws Exception {
         final int maxSchedule = 1;
         
@@ -338,6 +339,7 @@ public class NaginatorScheduleActionTest {
      * 
      * @throws Exception
      */
+    @Test
     public void testMatrixWithNoChildren() throws Exception {
         final int maxSchedule = 1;
         
@@ -375,6 +377,7 @@ public class NaginatorScheduleActionTest {
      * 
      * @throws Exception
      */
+    @Test
     public void testMatrixWithoutRerunMatrixPart() throws Exception {
         final int maxSchedule = 1;
         
