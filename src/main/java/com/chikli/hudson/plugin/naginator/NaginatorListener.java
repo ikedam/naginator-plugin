@@ -67,6 +67,10 @@ public class NaginatorListener extends RunListener<AbstractBuild<?,?>> {
         }
     }
 
+    /**
+     * @deprecated use {@link NaginatorScheduleAction#shouldSchedule(Run, TaskListener, int)}
+     * to control scheduling.
+     */
     @Deprecated
     public boolean canSchedule(Run build, NaginatorPublisher naginator) {
         Run r = build;

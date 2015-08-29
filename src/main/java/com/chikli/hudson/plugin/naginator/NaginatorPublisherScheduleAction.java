@@ -14,8 +14,8 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Used from {@link NaginatorPublisher} to mark a build to be reshceduled.
@@ -34,7 +34,7 @@ public class NaginatorPublisherScheduleAction extends NaginatorScheduleAction {
         this.checkRegexp = publisher.isCheckRegexp();
     }
     
-    @Nullable
+    @CheckForNull
     public String getRegexpForRerun() {
         return regexpForRerun;
     }
